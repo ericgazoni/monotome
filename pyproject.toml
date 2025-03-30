@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "monotome"
-version = "0.1.2"
+version = "0.1.3"
 description = "Declarative SQL migration system for modular and monorepo-based projects"
 authors = ["Eric Gazoni <eric@adimian.com>"]
 readme = "README.md"

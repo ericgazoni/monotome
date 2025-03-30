@@ -2,8 +2,8 @@ from collections import defaultdict
 
 
 def topological_sort(pages):
-    graph = defaultdict(set)
-    page_by_id = {page.id: page for page in pages}
+    graph = defaultdict(list)
+    page_by_id = {page.id: page for page in sorted(pages, key=lambda p: p.id)}
 
     for page in pages:
         if not page.requires:
@@ -12,8 +12,8 @@ def topological_sort(pages):
             requires = [page.requires]
         else:
             requires = page.requires
-        for required_file in requires:
-            graph[required_file].add(page.id)
+        for required_file in sorted(requires):
+            graph[required_file].append(page.id)
 
     visited = set()
     temp = set()
