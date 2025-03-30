@@ -6,7 +6,7 @@ from pathlib import Path
 
 import sqlparse
 import yaml
-from black.trans import defaultdict
+from collections import defaultdict
 from jinja2 import Template
 from sqlalchemy import Engine
 
