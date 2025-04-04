@@ -39,9 +39,7 @@ def extract_frontmatter(f) -> dict:
     return frontmatter
 
 
-def extract_pages(
-    document: dict, root: Path, stack_name: str
-) -> list[MigrationPage]:
+def extract_pages(document: dict, root: Path, stack_name: str) -> list[MigrationPage]:
     pages = []
     root_folder = document.get("migrations_root", ".")
     root = (root / root_folder).resolve()
@@ -96,9 +94,7 @@ def detect_migrations(
                 _depth=_depth + 1,
             )
             excludes = sub.get("excludes", [])
-            migrations.extend(
-                [m for m in sub_migrations if m.id not in excludes]
-            )
+            migrations.extend([m for m in sub_migrations if m.id not in excludes])
 
     migrations.extend(
         extract_pages(
@@ -109,7 +105,7 @@ def detect_migrations(
     )
 
     if not _depth:
-        local_lookup = defaultdict(dict)
+        local_lookup: dict[str, dict] = defaultdict(dict)
         lookup = defaultdict(list)
 
         for page in migrations:
@@ -186,6 +182,7 @@ def apply_migrations(engine: Engine, pages: list[MigrationPage]):
 
 def upgrade(root: Path, engine: Engine):
     pages = get_all_migrations(root=root)
+    assert_lockfile_consistency(root=root, pages=pages)
     apply_migrations(engine=engine, pages=pages)
 
 
@@ -196,17 +193,13 @@ def add_migration_to_stack(root: Path, migration_type: str, name: str):
     if not output_root.exists():
         output_root.mkdir(parents=False)
 
-    templates = (
-        document.get("templates", {}).get(migration_type, {}).get("files", [])
-    )
+    templates = document.get("templates", {}).get(migration_type, {}).get("files", [])
 
     for template in templates:
         output_file = output_root / template["name"]
 
         if output_file.exists() and output_file.read_text().strip():
-            raise ValueError(
-                f"File {output_file} already exists and is not empty"
-            )
+            raise ValueError(f"File {output_file} already exists and is not empty")
 
         with (output_root / template["name"]).open("w") as f:
             source = template.get("content", "")
@@ -219,3 +212,31 @@ def add_migration_to_stack(root: Path, migration_type: str, name: str):
                 strip_comments=False,
             )
             f.write(pretty)
+
+
+def read_lockfile(path: Path) -> dict[str, str]:
+    lockfile = path / "monotome.lock"
+    if not lockfile.exists():
+        return {}
+    with lockfile.open("r") as f:
+        data = yaml.safe_load(f)
+    return {item["id"]: item["checksum"] for item in data.get("migrations", [])}
+
+
+def assert_lockfile_consistency(root: Path, pages: list[MigrationPage]):
+    locked = read_lockfile(root)
+    for page in pages:
+        locked_checksum = locked.get(page.id)
+        if locked_checksum and locked_checksum != page.checksum:
+            raise ValueError(f"Migration {page.id} has changed since lockfile.")
+
+
+def write_lockfile(path: Path, pages: list[MigrationPage]):
+    data = {
+        "migrations": [
+            {"id": page.id, "checksum": page.checksum}
+            for page in topological_sort(pages)
+        ]
+    }
+    with (path / "monotome.lock").open("w") as f:
+        yaml.dump(data, f, sort_keys=False)

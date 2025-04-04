@@ -41,6 +41,16 @@ class MigrationPage(Page):
         return deepcopy(self)
 
 
-from .migrations import get_all_migrations, apply_migrations  # noqa
+from .migrations import (
+    get_all_migrations,
+    apply_migrations,
+    write_lockfile,
+    assert_lockfile_consistency,
+)  # noqa
 
-__all__ = ["get_all_migrations", "apply_migrations"]
+__all__ = [
+    "get_all_migrations",
+    "apply_migrations",
+    "write_lockfile",
+    "assert_lockfile_consistency",
+]

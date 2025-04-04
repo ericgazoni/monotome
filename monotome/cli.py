@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, Engine
 from sqlalchemy.exc import ProgrammingError
 
 from monotome import AppliedStatus, MigrationPage, migrations
+from monotome.migrations import write_lockfile, assert_lockfile_consistency
 
 cwd = os.getcwd()
 
@@ -132,6 +133,34 @@ def add(type: str, root: str, name: str, debug: bool):  # noqa
             migration_type=type,
             name=name,
         )
+    except Exception as e:
+        click.echo(click.style(str(e), fg="red"), err=True)
+        if debug:
+            raise
+
+
+@main.command()
+@click.argument("root", default=cwd)
+@click.option("--debug", default=False, is_flag=True)
+def lock(root: str, debug: bool):  # noqa
+    try:
+        path = Path(root)
+        pages = migrations.detect_migrations(root=path)
+        write_lockfile(path=path, pages=pages)
+    except Exception as e:
+        click.echo(click.style(str(e), fg="red"), err=True)
+        if debug:
+            raise
+
+
+@main.command()
+@click.argument("root", default=cwd)
+@click.option("--debug", default=False, is_flag=True)
+def check(root: str, debug: bool):  # noqa
+    try:
+        path = Path(root)
+        pages = migrations.detect_migrations(root=path)
+        assert_lockfile_consistency(root=path, pages=pages)
     except Exception as e:
         click.echo(click.style(str(e), fg="red"), err=True)
         if debug:
